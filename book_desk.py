@@ -66,9 +66,7 @@ def try_book_desk(page, config, target_date, dry_run=False):
     log.info(f"Navigating to {url}")
     page.goto(url, wait_until="networkidle", timeout=30000)
 
-    # OfficeSpace uses hash-based or path-based routing — navigate to the room booking section
-    # Try common OfficeSpace booking URL patterns
-    booking_url = f"{url}/#/book-a-desk"
+    booking_url = f"{url}/visual-directory/home"
     log.info(f"Navigating to booking page: {booking_url}")
     page.goto(booking_url, wait_until="networkidle", timeout=30000)
 
@@ -85,6 +83,11 @@ def try_book_desk(page, config, target_date, dry_run=False):
     # --- Select date ---
     log.info(f"Selecting date: {date_display}")
     _select_date(page, target_date)
+
+    # --- Set start/end times ---
+    log.info(f"Setting time: {start_time} - {end_time}")
+    _select_time(page, start_time, role="start")
+    _select_time(page, end_time, role="end")
 
     # --- Select location/floor/area if configured ---
     if location_name:
@@ -166,6 +169,72 @@ def _select_date(page, target_date):
         return
 
     log.warning("Could not find a date selector — proceeding and hoping the default date is correct.")
+
+
+def _select_time(page, time_str, role="start"):
+    """Set start or end time on the booking form. time_str format: 'HH:MM' (24h)."""
+    # Convert to 12-hour format for dropdowns that use AM/PM
+    h, m = map(int, time_str.split(":"))
+    period = "AM" if h < 12 else "PM"
+    h12 = h % 12 or 12
+    time_12h = f"{h12}:{m:02d} {period}"
+    time_12h_nospace = f"{h12}:{m:02d}{period}"
+
+    # Selector hints based on role
+    role_hints = ["start", "begin", "from", "arrival"] if role == "start" else ["end", "until", "to", "departure"]
+
+    # Strategy 1: <input type="time">
+    time_inputs = page.locator("input[type='time']")
+    count = time_inputs.count()
+    if count >= 2:
+        idx = 0 if role == "start" else 1
+        time_inputs.nth(idx).fill(time_str)
+        return
+    if count == 1 and role == "start":
+        time_inputs.first.fill(time_str)
+        return
+
+    # Strategy 2: labeled select or input containing role hint
+    for hint in role_hints:
+        selectors = [
+            f"select[name*='{hint}' i]",
+            f"input[name*='{hint}' i]",
+            f"input[placeholder*='{hint}' i]",
+            f"[aria-label*='{hint}' i]",
+        ]
+        for sel in selectors:
+            try:
+                el = page.locator(sel).first
+                if el.is_visible():
+                    tag = el.evaluate("el => el.tagName.toLowerCase()")
+                    if tag == "select":
+                        # Try 24h, 12h with space, 12h without space
+                        for val in [time_str, time_12h, time_12h_nospace]:
+                            try:
+                                el.select_option(label=val)
+                                return
+                            except Exception:
+                                pass
+                    else:
+                        el.fill(time_str)
+                        return
+            except Exception:
+                continue
+
+    # Strategy 3: find a dropdown whose options look like times and pick the right index
+    selects = page.locator("select")
+    for i in range(selects.count()):
+        sel = selects.nth(i)
+        try:
+            options = sel.locator("option").all_text_contents()
+            for val in [time_12h, time_12h_nospace, time_str]:
+                if val in options:
+                    sel.select_option(label=val)
+                    return
+        except Exception:
+            continue
+
+    log.warning(f"Could not set {role} time to {time_str} — proceeding with default.")
 
 
 def _select_option_by_text(page, text, context=""):
@@ -302,10 +371,6 @@ def main():
     headless = config.get("headless", True)
     retry_attempts = config.get("retry_attempts", 3)
     retry_delay = config.get("retry_delay_seconds", 30)
-
-    if "YOUR_COMPANY" in config["officespace_url"]:
-        log.error("Please update 'officespace_url' in config.json before running.")
-        sys.exit(1)
 
     check_session(session_file)
     target_date = get_target_date(config, args.date)

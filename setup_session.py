@@ -26,10 +26,6 @@ def setup_session():
     url = config["officespace_url"]
     session_file = config.get("session_file", "session.json")
 
-    if "YOUR_COMPANY" in url:
-        print("ERROR: Please update 'officespace_url' in config.json with your actual OfficeSpace URL.")
-        sys.exit(1)
-
     print(f"\n=== OfficeSpace Session Setup ===")
     print(f"URL: {url}")
     print(f"\nA browser window will open. Log in with your company SSO (Microsoft/Google/Okta/etc).")
