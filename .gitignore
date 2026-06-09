@@ -1,0 +1,8 @@
+session.json
+*.log
+booking_confirmed_*.png
+booking_failed_*.png
+__pycache__/
+*.pyc
+.venv/
+venv/

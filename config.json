@@ -1,0 +1,13 @@
+{
+  "officespace_url": "https://YOUR_COMPANY.officespacesoftware.com",
+  "location_name": "",
+  "floor_name": "",
+  "area_name": "",
+  "days_ahead": 1,
+  "booking_start_time": "09:00",
+  "booking_end_time": "17:00",
+  "session_file": "session.json",
+  "headless": true,
+  "retry_attempts": 3,
+  "retry_delay_seconds": 30
+}
