@@ -27,9 +27,9 @@ def get_python_path():
 
 def get_cron_line(project_dir, python_path):
     log_path = os.path.join(project_dir, "cron.log")
-    # Run at 5:00 AM Monday-Friday
+    # Run at 5:00 AM Tuesday-Thursday
     return (
-        f"0 5 * * 1-5 cd {project_dir} && {python_path} book_desk.py >> {log_path} 2>&1 "
+        f"0 5 * * 2-4 cd {project_dir} && {python_path} book_desk.py >> {log_path} 2>&1 "
         f"{CRON_COMMENT}"
     )
 
@@ -67,7 +67,7 @@ def install_cron():
     set_crontab(updated)
 
     print(f"\n✓ Cron job installed!")
-    print(f"  Schedule: 5:00 AM Monday-Friday")
+    print(f"  Schedule: 5:00 AM Tuesday-Thursday")
     print(f"  Project:  {project_dir}")
     print(f"  Python:   {python_path}")
     print(f"  Log file: {project_dir}/cron.log")
